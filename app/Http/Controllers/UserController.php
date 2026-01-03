@@ -4,66 +4,90 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Section;
+use App\Models\Role;
+use App\Models\SectionUserRole;
 
 class UserController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-public function index()
-{
-    return User::with('role', 'section', 'creator')->get();
-}
-
-public function store(Request $request)
-{
-    $user = auth()->user(); // logged-in user
-
-    $role_id = $request->role_id;
-    $section_id = $request->section_id;
-
-    // 1️⃣ High Admin: can create anyone, including Presidents
-    if ($user->role->name === 'High Admin') {
-        // no restriction
+    public function index()
+    {
+        $users = User::with('sections', 'creator')->get();
+        return $users;
     }
-    // 2️⃣ President: can create only Normal Users in their own section
-    elseif (str_contains($user->role->name, 'Chabiba President')) {
-        if($section_id != 1 || $role_id == 2) {
+
+    public function store(Request $request)
+    {
+        $user = auth()->user(); // logged-in user
+
+        $role_id = $request->role_id;
+        $section_id = $request->section_id;
+
+        // 1️⃣ High Admin: can create anyone, including Presidents
+        if ($user->role->name === 'High Admin') {
+            // no restriction
+        }
+        // 2️⃣ President: can create only Normal Users in their own section
+        elseif (str_contains($user->role->name, 'Chabiba President')) {
+            if($section_id != 1 || $role_id == 2) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+        }
+        elseif (str_contains($user->role->name, 'Tala2e3 President')) {
+            if($section_id != 2 || $role_id == 3) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+        }
+        elseif (str_contains($user->role->name, 'Forsan President')) {
+            if($section_id != 3 || $role_id == 4) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+        }
+        // 3️⃣ Normal Users: cannot create anyone
+        else {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // ✅ Passed all checks, create the user
+        $newUser = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role_id' => $role_id,
+            'section_id' => $section_id,
+            'created_by' => $user->id,
+        ]);
+
+        return response()->json($newUser);
     }
-    elseif (str_contains($user->role->name, 'Tala2e3 President')) {
-        if($section_id != 2 || $role_id == 3) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+    function chabiba() {
+        $users = User::whereHas('sections', function ($query) {
+            $query->where('sections.id', 1); 
+        })->get();
 
-    }
-    elseif (str_contains($user->role->name, 'Forsan President')) {
-        if($section_id != 3 || $role_id == 4) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-    }
-    // 3️⃣ Normal Users: cannot create anyone
-    else {
-        return response()->json(['error' => 'Unauthorized'], 403);
+        return $users;
     }
 
-    // ✅ Passed all checks, create the user
-    $newUser = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => bcrypt($request->password),
-        'role_id' => $role_id,
-        'section_id' => $section_id,
-        'created_by' => $user->id,
-    ]);
+    function tala2e3() {
+        $users = User::whereHas('sections', function ($query) {
+            $query->where('sections.id', 2);
+        })->get();
 
-    return response()->json($newUser);
-}
+        return $users;
+    }
 
+    function forsan() {
+        $users = User::whereHas('sections', function ($query) {
+            $query->where('sections.id', 3);
+        })->get();
 
-
+        return $users;
+    }
 
     /**
      * Display the specified resource.
@@ -95,7 +119,13 @@ public function store(Request $request)
      */
     public function destroy(string $id)
     {
-        //
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        $user->delete();
+        return response()->json(['message' => 'User deleted successfully']);
     }
 
     public function login(Request $request)

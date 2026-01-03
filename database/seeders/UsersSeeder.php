@@ -1,55 +1,59 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders; // ✅ THIS LINE WAS MISSING
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use App\Models\Section;
 use App\Models\Role;
-use Illuminate\Support\Facades\Hash;
 
 class UsersSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        $highAdminRole = Role::where('name', 'High Admin')->first();
-
-        User::create([
+        // Create Super Admin user
+        $superAdmin = User::create([
             'name' => 'Super Admin',
             'email' => 'chamounjoseph25@gmail.com',
-            'password' => Hash::make('admin123$'),
-            'role_id' => $highAdminRole->id,
-            'section_id' => null,
+            'password' => bcrypt('admin123$'),
             'created_by' => null,
+            'is_global_admin' => true,
         ]);
 
-        User::create([
+
+        $chabiba = Section::where('name', 'Chabiba')->first();
+        $talaee = Section::where('name', 'Talaee')->first();
+        $highAdminRole = Role::where('name', 'High Admin')->first();
+        $normalUserRole = Role::where('name', 'Normal User')->first();
+
+        // Attach Super Admin to multiple sections
+        $superAdmin->sections()->attach([
+            $chabiba->id => ['role_id' => $highAdminRole->id],
+            $talaee->id => ['role_id' => $highAdminRole->id],
+        ]);
+
+        // Create a normal user
+        $user = User::create([
             'name' => 'Joseph Chamoun',
             'email' => 'chamounjoseph@gmail.com',
-            'password' => Hash::make('joseph123$'),
-            'role_id' => 10,
-            'section_id' => 1,
-            'created_by' => 1,
+            'password' => bcrypt('password'),
+            'created_by' => $superAdmin->id,
         ]);
 
-        User::create([
-            'name' => 'Carla Issa',
-            'email' => 'carlaissa@gmail.com',
-            'password' => Hash::make('carla123$'),
-            'role_id' => 9,
-            'section_id' => 1,
-            'created_by' => 1,
+        $user->sections()->attach([
+            $chabiba->id => ['role_id' => $normalUserRole->id],
         ]);
 
-        User::create([
-            'name' => 'Josephine Abdallah',
-            'email' => 'jadchamoun@gmail.com',
-            'password' => Hash::make('jad123$'),
-            'role_id' => 3,
-            'section_id' =>3 ,
-            'created_by' => 1,
-        ]);
+        $globalAdmin = User::create([
+    'name' => 'Global Admin',
+    'email' => 'admin@example.com',
+    'password' => bcrypt('admin123$'),
+    'is_global_admin' => true,
+]);
+
+
+
 
 
     }
 }
-

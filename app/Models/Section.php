@@ -11,9 +11,12 @@ class Section extends Model
 
     protected $fillable = ['name', 'description'];
 
-    public function users()
-    {
-        return $this->hasMany(User::class);
-    }
+public function users()
+{
+    return $this->belongsToMany(User::class, 'section_user_roles')
+        ->withPivot('role_id')
+        ->withTimestamps();
+}
+
 }
 

@@ -61,6 +61,17 @@ class EventController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $user= auth()->user();
+
+        $event = Event::find($id);
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+        if ($user->role->name !== 'High Admin' || $event->created_by !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $event->delete();
+        return response()->json(['message' => 'Event deleted successfully']);
     }
 }

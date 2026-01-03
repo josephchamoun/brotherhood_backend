@@ -22,11 +22,19 @@ use App\Http\Controllers\SectionController;
     Route::get('/profile', [UserController::class, 'profile'])->middleware('auth:sanctum');
 
 
-    //Show User by ID
+    //Users
     Route::middleware('auth:sanctum')->get('/me', [UserController::class, 'show']);
+    Route::middleware('auth:sanctum')->delete('/user/delete/{id}', [UserController::class, 'destroy']);
+
+    Route::middleware('auth:sanctum')->get('/chabiba', [UserController::class, 'chabiba']);
+    Route::middleware('auth:sanctum')->get('/tala2e3', [UserController::class, 'tala2e3']);
+    Route::middleware('auth:sanctum')->get('/forsan', [UserController::class, 'forsan']);
 
     //Get all Roles
     Route::middleware('auth:sanctum')->get('/roles', [RoleController::class, 'index']);
 
     //Get all Sections
     Route::middleware('auth:sanctum')->get('/sections', [SectionController::class, 'index']);
+
+    //Events
+    Route::middleware('auth:sanctum')->delete('/event/delete/{id}', [EventController::class, 'destroy']);

@@ -18,7 +18,15 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
- protected $fillable = ['name','email','phone','password','section_id','role_id','created_by'];
+ protected $fillable = [
+    'name',
+    'email',
+    'phone',
+    'password',
+    'created_by',
+    'is_global_admin'
+];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -39,15 +47,16 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-    public function section()
-    {
-        return $this->belongsTo(Section::class);
-    }
+public function sections()
+{
+    return $this->belongsToMany(
+        Section::class,
+        'section_user_roles'
+    )
+    ->withPivot('role_id')
+    ->withTimestamps();
+}
 
-    public function role()
-    {
-        return $this->belongsTo(Role::class);
-    }
 
     public function creator()
     {

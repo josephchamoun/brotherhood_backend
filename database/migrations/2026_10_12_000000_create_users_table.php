@@ -17,8 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('phone')->nullable();
             $table->string('password');
-            $table->foreignId('section_id')->nullable()->constrained('sections');
-            $table->foreignId('role_id')->nullable()->constrained('roles');
+            $table->boolean('is_global_admin')->default(false)->after('password');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
