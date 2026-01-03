@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SectionController;
 
 
     Route::apiResource('users', UserController::class);
@@ -22,3 +24,9 @@ use App\Http\Controllers\ShopController;
 
     //Show User by ID
     Route::middleware('auth:sanctum')->get('/me', [UserController::class, 'show']);
+
+    //Get all Roles
+    Route::middleware('auth:sanctum')->get('/roles', [RoleController::class, 'index']);
+
+    //Get all Sections
+    Route::middleware('auth:sanctum')->get('/sections', [SectionController::class, 'index']);
