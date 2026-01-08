@@ -16,6 +16,7 @@ public function run(): void
         RolesSeeder::class,
         SectionsSeeder::class,
         UsersSeeder::class,
+        Role2Seeder::class,
     ]);
 }
 

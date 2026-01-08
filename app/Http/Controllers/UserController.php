@@ -7,87 +7,66 @@ use App\Models\User;
 use App\Models\Section;
 use App\Models\Role;
 use App\Models\SectionUserRole;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+
+
+public function index()
+{
+    return Cache::remember('users.index', 60, function () {
+        return User::with([
+                'sections:id,name',      // load sections, only needed fields
+                'creator:id,name'        // optional, light
+            ])
+            ->select(
+                'id',
+                'name',
+                'email',
+                'phone',
+                'is_global_admin',
+                'created_by'
+            )
+            ->orderBy('name')
+            ->get();
+    });
+}
+
+
+        public function store(Request $request)
     {
-        $users = User::with('sections', 'creator')->get();
-        return $users;
-    }
+        $authUser = auth()->user();
 
-    public function store(Request $request)
-    {
-        $user = auth()->user(); // logged-in user
-
-        $role_id = $request->role_id;
-        $section_id = $request->section_id;
-
-        // 1️⃣ High Admin: can create anyone, including Presidents
-        if ($user->role->name === 'High Admin') {
-            // no restriction
-        }
-        // 2️⃣ President: can create only Normal Users in their own section
-        elseif (str_contains($user->role->name, 'Chabiba President')) {
-            if($section_id != 1 || $role_id == 2) {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-        }
-        elseif (str_contains($user->role->name, 'Tala2e3 President')) {
-            if($section_id != 2 || $role_id == 3) {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-        }
-        elseif (str_contains($user->role->name, 'Forsan President')) {
-            if($section_id != 3 || $role_id == 4) {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-        }
-        // 3️⃣ Normal Users: cannot create anyone
-        else {
+        // 🔒 Only global admins can create users
+        if (!$authUser->is_global_admin) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // ✅ Passed all checks, create the user
-        $newUser = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
-            'role_id' => $role_id,
-            'section_id' => $section_id,
-            'created_by' => $user->id,
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8',
+            'is_global_admin' => 'boolean'
         ]);
 
-        return response()->json($newUser);
-    }
-    function chabiba() {
-        $users = User::whereHas('sections', function ($query) {
-            $query->where('sections.id', 1); 
-        })->get();
+        $newUser = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'is_global_admin' => $validated['is_global_admin'] ?? false,
+            'created_by' => $authUser->id,
+        ]);
+            Cache::forget('users.index');
 
-        return $users;
-    }
-
-    function tala2e3() {
-        $users = User::whereHas('sections', function ($query) {
-            $query->where('sections.id', 2);
-        })->get();
-
-        return $users;
+        return response()->json($newUser, 201);
     }
 
-    function forsan() {
-        $users = User::whereHas('sections', function ($query) {
-            $query->where('sections.id', 3);
-        })->get();
-
-        return $users;
-    }
 
     /**
      * Display the specified resource.
@@ -125,6 +104,7 @@ class UserController extends Controller
         }
 
         $user->delete();
+            Cache::forget('users.index');
         return response()->json(['message' => 'User deleted successfully']);
     }
 
@@ -147,4 +127,49 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Logged out successfully']);
     }
+
+
+    public function addToSection(Request $request, User $user)
+    {
+        $loggedUser = auth()->user();
+
+        // Only global admins can assign users to sections
+        if (!$loggedUser->is_global_admin) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Validate request
+        $validator = Validator::make($request->all(), [
+            'section_id' => 'required|exists:sections,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $sectionId = $request->section_id;
+
+        // Check if the user is already in this section
+        $exists = SectionUserRole::where('user_id', $user->id)
+            ->where('section_id', $sectionId)
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['error' => 'User is already in this section'], 409);
+        }
+
+        // Add the user to the section
+        SectionUserRole::create([
+            'user_id' => $user->id,
+            'section_id' => $sectionId,
+            'role_id' => 10, // Optional: you can assign a role here if needed
+        ]);
+            Cache::forget('users.index');
+
+        return response()->json(['message' => 'User added to section successfully']);
+    }
+
+
+
+
 }
