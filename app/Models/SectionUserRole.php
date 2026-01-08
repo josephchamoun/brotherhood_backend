@@ -11,6 +11,8 @@ class SectionUserRole extends Model
         'user_id',
         'section_id',
         'role_id',
+        'start_date',
+    'end_date',
     ];
 }
 

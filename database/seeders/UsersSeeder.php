@@ -1,59 +1,113 @@
 <?php
 
-namespace Database\Seeders; // ✅ THIS LINE WAS MISSING
+namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Section;
 use App\Models\Role;
+use App\Models\SectionUserRole;
 
 class UsersSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        // Create Super Admin user
-        $superAdmin = User::create([
-            'name' => 'Super Admin',
-            'email' => 'chamounjoseph25@gmail.com',
-            'password' => bcrypt('admin123$'),
-            'created_by' => null,
-            'is_global_admin' => true,
-        ]);
+        $today = now()->toDateString();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Super Admin
+        |--------------------------------------------------------------------------
+        */
+        $superAdmin = User::updateOrCreate(
+            ['email' => 'chamounjoseph25@gmail.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('admin123$'),
+                'created_by' => null,
+                'is_global_admin' => true,
+            ]
+        );
 
-        $chabiba = Section::where('name', 'Chabiba')->first();
-        $talaee = Section::where('name', 'Talaee')->first();
-        $highAdminRole = Role::where('name', 'High Admin')->first();
-        $normalUserRole = Role::where('name', 'Normal User')->first();
+        /*
+        |--------------------------------------------------------------------------
+        | Sections & Roles
+        |--------------------------------------------------------------------------
+        */
+        $chabiba = Section::where('name', 'Chabiba')->firstOrFail();
+        $talaee  = Section::where('name', 'Talaee')->firstOrFail();
 
-        // Attach Super Admin to multiple sections
-        $superAdmin->sections()->attach([
-            $chabiba->id => ['role_id' => $highAdminRole->id],
-            $talaee->id => ['role_id' => $highAdminRole->id],
-        ]);
+        $highAdminRole  = Role::where('name', 'High Admin')->firstOrFail();
+        $normalUserRole = Role::where('name', 'Normal User')->firstOrFail();
 
-        // Create a normal user
-        $user = User::create([
-            'name' => 'Joseph Chamoun',
-            'email' => 'chamounjoseph@gmail.com',
-            'password' => bcrypt('password'),
-            'created_by' => $superAdmin->id,
-        ]);
+        /*
+        |--------------------------------------------------------------------------
+        | Assign Super Admin to Sections
+        |--------------------------------------------------------------------------
+        */
+        SectionUserRole::updateOrCreate(
+            [
+                'user_id'    => $superAdmin->id,
+                'section_id' => $chabiba->id,
+                'role_id'    => $highAdminRole->id,
+                'start_date' => $today,
+            ],
+            [
+                'end_date' => null,
+            ]
+        );
 
-        $user->sections()->attach([
-            $chabiba->id => ['role_id' => $normalUserRole->id],
-        ]);
+        SectionUserRole::updateOrCreate(
+            [
+                'user_id'    => $superAdmin->id,
+                'section_id' => $talaee->id,
+                'role_id'    => $highAdminRole->id,
+                'start_date' => $today,
+            ],
+            [
+                'end_date' => null,
+            ]
+        );
 
-        $globalAdmin = User::create([
-    'name' => 'Global Admin',
-    'email' => 'admin@example.com',
-    'password' => bcrypt('admin123$'),
-    'is_global_admin' => true,
-]);
+        /*
+        |--------------------------------------------------------------------------
+        | Normal User
+        |--------------------------------------------------------------------------
+        */
+        $user = User::updateOrCreate(
+            ['email' => 'chamounjoseph@gmail.com'],
+            [
+                'name' => 'Joseph Chamoun',
+                'password' => bcrypt('password'),
+                'created_by' => $superAdmin->id,
+                'is_global_admin' => false,
+            ]
+        );
 
+        SectionUserRole::updateOrCreate(
+            [
+                'user_id'    => $user->id,
+                'section_id' => $chabiba->id,
+                'role_id'    => $normalUserRole->id,
+                'start_date' => $today,
+            ],
+            [
+                'end_date' => null,
+            ]
+        );
 
-
-
-
+        /*
+        |--------------------------------------------------------------------------
+        | Global Admin (no section assignment)
+        |--------------------------------------------------------------------------
+        */
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Global Admin',
+                'password' => bcrypt('admin123$'),
+                'is_global_admin' => true,
+            ]
+        );
     }
 }

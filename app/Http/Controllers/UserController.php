@@ -163,6 +163,8 @@ public function index()
             'user_id' => $user->id,
             'section_id' => $sectionId,
             'role_id' => 10, // Optional: you can assign a role here if needed
+            'start_date' => now()->toDateString(),
+            'end_date' => null,
         ]);
             Cache::forget('users.index');
 

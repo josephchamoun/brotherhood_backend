@@ -53,7 +53,7 @@ public function sections()
         Section::class,
         'section_user_roles'
     )
-    ->withPivot('role_id')
+    ->withPivot('role_id', 'start_date', 'end_date')
     ->withTimestamps();
 }
 
