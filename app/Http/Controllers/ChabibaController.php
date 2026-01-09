@@ -5,37 +5,44 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\SectionUserRole;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 
 
 class ChabibaController extends Controller
 {
 
-public function index(Request $request)
+public function index()
 {
-    $date = $request->query('date', now()->toDateString());
+    $users = User::whereHas('chabibaRoles')
+        ->with('chabibaRoles')
+        ->get();
 
-    $users = User::whereHas('sections', function ($query) use ($date) {
-        $query->where('sections.id', 1)
-              ->where('start_date', '<=', $date)
-              ->where(function ($q) use ($date) {
-                  $q->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $date);
-              });
-    })
-    ->with(['sections' => function ($query) use ($date) {
-        $query->where('sections.id', 1)
-              ->where('start_date', '<=', $date)
-              ->where(function ($q) use ($date) {
-                  $q->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $date);
-              });
-    }])
-    ->get();
+    $activeUsers = [];
+    $inactiveUsers = [];
 
-    return response()->json($users);
+    foreach ($users as $user) {
+        $latestRole = $user->chabibaRoles->first(); // latest by start_date
+
+        if ($latestRole && $latestRole->end_date === null) {
+            $activeUsers[] = $user;
+        } else {
+            $inactiveUsers[] = $user;
+        }
+    }
+
+    return response()->json([
+        'active_users'   => $activeUsers,
+        'inactive_users' => $inactiveUsers,
+    ]);
 }
+
 
 
 public function assignRole(Request $request)
@@ -78,14 +85,26 @@ public function assignRole(Request $request)
         ->whereNull('end_date')
         ->update(['end_date' => $today]);
 
-    // 3️⃣ Create a new role assignment (new pivot row)
-    SectionUserRole::create([
-        'user_id'    => $userId,
-        'section_id' => $sectionId,
-        'role_id'    => $roleId,
-        'start_date' => $today,
-        'end_date'   => null,
-    ]);
+    // 3️⃣ Check if there's already a record for this role on today (same day reassignment)
+    $existingToday = SectionUserRole::where('user_id', $userId)
+        ->where('section_id', $sectionId)
+        ->where('role_id', $roleId)
+        ->where('start_date', $today)
+        ->first();
+
+    if ($existingToday) {
+        // Reactivate the existing record from today
+        $existingToday->update(['end_date' => null]);
+    } else {
+        // Create a new role assignment (new pivot row)
+        SectionUserRole::create([
+            'user_id'    => $userId,
+            'section_id' => $sectionId,
+            'role_id'    => $roleId,
+            'start_date' => $today,
+            'end_date'   => null,
+        ]);
+    }
 
     // 4️⃣ Clear cache if you use caching
     Cache::forget('users.index');
@@ -96,7 +115,7 @@ public function assignRole(Request $request)
 }
 
 
-public function removeRole(Request $request)
+public function endRole(Request $request)
 {
     $authUser = auth()->user();
 
@@ -109,43 +128,101 @@ public function removeRole(Request $request)
         'section_id' => 'required|exists:sections,id',
     ]);
 
-    $user = User::findOrFail($validated['user_id']);
-    $sectionId = $validated['section_id'];
     $today = now()->toDateString();
 
-    // Get the **active role** for this section
-    $activePivot = $user->sections()
-        ->wherePivot('section_id', $sectionId)
-        ->wherePivotNull('end_date') // ONLY active roles
-        ->first()?->pivot;
+    $active = SectionUserRole::where('user_id', $validated['user_id'])
+        ->where('section_id', $validated['section_id'])
+        ->whereNull('end_date')
+        ->first();
 
-    if (!$activePivot) {
-        return response()->json([
-            'error' => 'No active role to remove for this user in this section'
-        ], 400);
+    if (!$active) {
+        return response()->json(['error' => 'No active role'], 400);
     }
 
-    // ✅ End the active role
-    $user->sections()->updateExistingPivot(
-        $sectionId,
-        ['end_date' => $today]
-    );
+    $active->update(['end_date' => $today]);
 
-    // ✅ Start a new Normal User role
-    $user->sections()->attach(
-        $sectionId,
-        [
-            'role_id'    => 10, // Normal User
-            'start_date' => $today,
-            'end_date'   => null,
-        ]
-    );
-
-    return response()->json([
-        'message' => 'Role removed. User is now a normal member.'
-    ]);
+    return response()->json(['message' => 'Role ended']);
 }
 
+
+public function activateUser(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'section_id' => 'sometimes|exists:sections,id',
+    ]);
+
+    $sectionId = $request->section_id ?? 1;
+    $today = now()->toDateString();
+
+    try {
+        DB::transaction(function () use ($request, $sectionId, $today) {
+
+            // End any active roles in this section
+            SectionUserRole::where('user_id', $request->user_id)
+                ->where('section_id', $sectionId)
+                ->whereNull('end_date')
+                ->update([
+                    'end_date' => $today,
+                ]);
+
+            // Check if there's already a role for today (same day reactivation)
+            $existingToday = SectionUserRole::where('user_id', $request->user_id)
+                ->where('section_id', $sectionId)
+                ->where('role_id', 10)
+                ->where('start_date', $today)
+                ->first();
+
+            if ($existingToday) {
+                // Update the existing record to reactivate it
+                $existingToday->update(['end_date' => null]);
+            } else {
+                // Create new role assignment only if it doesn't exist for today
+                SectionUserRole::create([
+                    'user_id'    => $request->user_id,
+                    'section_id' => $sectionId,
+                    'role_id'    => 10,
+                    'start_date' => $today,
+                    'end_date'   => null,
+                ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'User activated successfully'
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Activate user error: ".$e->getMessage());
+        return response()->json([
+            'message' => 'Failed to activate user',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+
+
+
+
+
+public function inactivateUser(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+    ]);
+
+    SectionUserRole::where('user_id', $request->user_id)
+        ->where('section_id', 1)
+        ->whereNull('end_date')
+        ->update([
+            'end_date' => now()->toDateString(),
+        ]);
+
+    return response()->json([
+        'message' => 'User inactivated successfully'
+    ]);
+}
 
 
 

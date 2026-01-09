@@ -51,6 +51,9 @@ use App\Http\Controllers\ForsanController;
     Route::get('/chabiba-role', [ChabibaController::class, 'index']);
     Route::post('/chabiba/assign-role', [ChabibaController::class, 'assignRole']);
     Route::post('/chabiba/remove-role', [ChabibaController::class, 'removeRole']);
+
+        Route::post('/chabiba/activate-user', [ChabibaController::class, 'activateUser']);
+    Route::post('/chabiba/inactivate-user', [ChabibaController::class, 'inactivateUser']);
 });
     Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tala2e3-role', [Tala2e3Controller::class, 'index']);

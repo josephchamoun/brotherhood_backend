@@ -67,4 +67,11 @@ public function sections()
     {
         return $this->hasMany(User::class, 'created_by');
     }
+
+    public function chabibaRoles()
+{
+    return $this->hasMany(SectionUserRole::class)
+        ->where('section_id', 1)
+        ->orderBy('start_date', 'desc');
+}
 }
