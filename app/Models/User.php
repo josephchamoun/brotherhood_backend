@@ -69,9 +69,27 @@ public function sections()
     }
 
     public function chabibaRoles()
-{
-    return $this->hasMany(SectionUserRole::class)
-        ->where('section_id', 1)
-        ->orderBy('start_date', 'desc');
-}
+    {
+        return $this->hasMany(SectionUserRole::class)
+            ->where('section_id', 1)
+            ->orderBy('start_date', 'desc');
+    }
+
+    public function sectionRoles()
+    {
+        return $this->hasMany(SectionUserRole::class);
+    }
+
+    public function activeSectionRoles()
+        {
+            return $this->sectionRoles()->whereNull('end_date');
+        }
+
+        public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'chabiba_user_roles')
+            ->withPivot('section_id', 'start_date', 'end_date')
+            ->withTimestamps();
+    }
+
 }

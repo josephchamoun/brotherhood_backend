@@ -10,7 +10,7 @@ use App\Models\SectionUserRole;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-
+use Illuminate\Validation\Rule;
 class UserController extends Controller
 {
     /**
@@ -51,6 +51,7 @@ public function index()
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
             'is_global_admin' => 'boolean'
         ]);
@@ -58,6 +59,7 @@ public function index()
         $newUser = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
             'password' => bcrypt($validated['password']),
             'is_global_admin' => $validated['is_global_admin'] ?? false,
             'created_by' => $authUser->id,
@@ -67,15 +69,149 @@ public function index()
         return response()->json($newUser, 201);
     }
 
+    public function profile($id)
+{
+    $auth = auth()->user();
+
+    if (!$auth || !$auth->is_global_admin) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+   $user = User::with([
+    'sectionRoles.section:id,name',
+    'sectionRoles.role:id,name'
+])->findOrFail($id);
+
+
+    return response()->json($user);
+}
+
+public function updateProfile(Request $request, $id)
+{
+    $auth = auth()->user();
+
+    if (!$auth || !$auth->is_global_admin) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $user = User::findOrFail($id);
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => ['required','email', Rule::unique('users')->ignore($user->id)],
+        'phone' => 'nullable|string|max:20',
+        'password' => 'nullable|min:8'
+    ]);
+
+    if (!empty($validated['password'])) {
+        $validated['password'] = bcrypt($validated['password']);
+    } else {
+        unset($validated['password']);
+    }
+
+    $user->update($validated);
+
+    return response()->json([
+        'success' => true,
+        'user' => $user->fresh() // fetch latest from DB
+    ]);
+}
+
+
+// Show logged-in user's profile
+public function myProfile()
+{
+    $auth = auth()->user();
+
+    if (!$auth) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $user = User::with([
+        'sectionRoles.section:id,name',
+        'sectionRoles.role:id,name'
+    ])->find($auth->id);
+
+    return response()->json($user);
+}
+
+// Update email and password only
+public function updateMyProfile(Request $request)
+{
+    $auth = auth()->user();
+
+    if (!$auth) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $user = User::find($auth->id);
+
+    $validated = $request->validate([
+        'email' => ['required','email', Rule::unique('users')->ignore($user->id)],
+        'password' => 'nullable|min:8',
+    ]);
+
+    if (!empty($validated['password'])) {
+        $validated['password'] = bcrypt($validated['password']);
+    } else {
+        unset($validated['password']);
+    }
+
+    $user->update($validated);
+
+    return response()->json([
+        'success' => true,
+        'user' => $user->fresh(),
+    ]);
+}
+
+
+
 
     /**
      * Display the specified resource.
      */
-    public function show(Request $request)
-    {
-        $user = auth()->user();
-        return response()->json($user);
-    }
+public function show(Request $request)
+{
+    $user = auth()->user();
+
+    $user->load([
+        // Only active roles (end_date = null)
+        'sectionRoles' => function ($q) {
+            $q->whereNull('end_date')
+              ->with(['role', 'section']);
+        }
+    ]);
+
+    return response()->json([
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'phone' => $user->phone,
+        'is_global_admin' => (bool) $user->is_global_admin,
+
+        // Format roles cleanly
+        'roles' => $user->sectionRoles->map(function ($r) {
+            return [
+                'id' => $r->id,
+                'role_id' => $r->role_id,
+                'role_name' => $r->role->name,
+                'section_id' => $r->section_id,
+                'section_name' => $r->section->name,
+                'start_date' => $r->start_date,
+                'end_date' => $r->end_date,
+            ];
+        }),
+
+        // Unique active sections
+        'sections' => $user->sectionRoles
+            ->pluck('section')
+            ->unique('id')
+            ->values(),
+    ]);
+}
+
+
 
     /**
      * Show the form for editing the specified resource.

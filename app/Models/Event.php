@@ -7,12 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
-    use HasFactory;
+    protected $fillable = [
+        'title','description','event_date','type',
+        'total_spent','total_revenue','notes','drive_link','created_by'
+    ];
 
-    protected $fillable = ['title', 'description', 'type','event_date','total_spent','total_revenue'];
+    public function sections()
+    {
+        return $this->belongsToMany(Section::class, 'event_section');
+    }
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 }
+

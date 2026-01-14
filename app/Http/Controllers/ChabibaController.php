@@ -28,9 +28,11 @@ public function index()
     $inactiveUsers = [];
 
     foreach ($users as $user) {
-        $latestRole = $user->chabibaRoles->first(); // latest by start_date
+        $hasActiveRole = $user->chabibaRoles
+            ->whereNull('end_date')
+            ->count() > 0;
 
-        if ($latestRole && $latestRole->end_date === null) {
+        if ($hasActiveRole) {
             $activeUsers[] = $user;
         } else {
             $inactiveUsers[] = $user;
@@ -42,6 +44,7 @@ public function index()
         'inactive_users' => $inactiveUsers,
     ]);
 }
+
 
 
 
@@ -130,19 +133,48 @@ public function endRole(Request $request)
 
     $today = now()->toDateString();
 
-    $active = SectionUserRole::where('user_id', $validated['user_id'])
-        ->where('section_id', $validated['section_id'])
-        ->whereNull('end_date')
-        ->first();
+    DB::transaction(function () use ($validated, $today) {
 
-    if (!$active) {
-        return response()->json(['error' => 'No active role'], 400);
-    }
+        // 1️⃣ End current active role (NOT normal)
+        $activeRole = SectionUserRole::where('user_id', $validated['user_id'])
+            ->where('section_id', $validated['section_id'])
+            ->whereNull('end_date')
+            ->where('role_id', '!=', 10)
+            ->first();
 
-    $active->update(['end_date' => $today]);
+        if (!$activeRole) {
+            throw new \Exception('No active non-normal role');
+        }
 
-    return response()->json(['message' => 'Role ended']);
+        $activeRole->update([
+            'end_date' => $today
+        ]);
+
+        // 2️⃣ Reactivate or create NORMAL role
+        $existingNormalToday = SectionUserRole::where('user_id', $validated['user_id'])
+            ->where('section_id', $validated['section_id'])
+            ->where('role_id', 10)
+            ->where('start_date', $today)
+            ->first();
+
+        if ($existingNormalToday) {
+            $existingNormalToday->update(['end_date' => null]);
+        } else {
+            SectionUserRole::create([
+                'user_id'    => $validated['user_id'],
+                'section_id' => $validated['section_id'],
+                'role_id'    => 10,
+                'start_date' => $today,
+                'end_date'   => null,
+            ]);
+        }
+    });
+
+    return response()->json([
+        'message' => 'Role ended and user returned to normal'
+    ]);
 }
+
 
 
 public function activateUser(Request $request)

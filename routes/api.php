@@ -11,9 +11,7 @@ use App\Http\Controllers\ChabibaController;
 use App\Http\Controllers\Tala2e3Controller;
 use App\Http\Controllers\ForsanController;
 
-    Route::apiResource('users', UserController::class);
-    Route::apiResource('events', EventController::class);
-    Route::apiResource('shops', ShopController::class);
+
 
 
 
@@ -25,8 +23,20 @@ use App\Http\Controllers\ForsanController;
 
 
     //Users
+        Route::middleware('auth:sanctum')->get('/users', [UserController::class, 'index']);
     Route::middleware('auth:sanctum')->get('/me', [UserController::class, 'show']);
     Route::middleware('auth:sanctum')->delete('/user/delete/{id}', [UserController::class, 'destroy']);
+    Route::get('/users/{id}/profile', [UserController::class, 'profile'])
+    ->middleware('auth:sanctum');
+    Route::put('/users/{id}', [UserController::class, 'updateProfile'])
+    ->middleware('auth:sanctum');
+
+Route::middleware('auth:sanctum')->get('/myprofile', [UserController::class, 'myProfile']);
+Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'updateMyProfile']);
+
+
+
+
 
     Route::middleware('auth:sanctum')->get('/chabiba', [UserController::class, 'chabiba']);
     Route::middleware('auth:sanctum')->get('/tala2e3', [UserController::class, 'tala2e3']);
@@ -42,8 +52,13 @@ use App\Http\Controllers\ForsanController;
     //Get all Sections
     Route::middleware('auth:sanctum')->get('/sections', [SectionController::class, 'index']);
 
-    //Events
-    Route::middleware('auth:sanctum')->delete('/event/delete/{id}', [EventController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/events', [EventController::class, 'index']);
+    Route::post('/events', [EventController::class, 'store']);
+    Route::put('/events/{id}/details', [EventController::class, 'updateDetails']);
+    Route::put('/events/{id}/financials', [EventController::class, 'updateFinancials']);
+    Route::delete('/events/{id}', [EventController::class, 'destroy']);
+});
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -51,7 +66,7 @@ use App\Http\Controllers\ForsanController;
     Route::get('/chabiba-role', [ChabibaController::class, 'index']);
     Route::post('/chabiba/assign-role', [ChabibaController::class, 'assignRole']);
     Route::post('/chabiba/remove-role', [ChabibaController::class, 'removeRole']);
-
+    Route::post('/chabiba/end-role', [ChabibaController::class, 'endRole']);
         Route::post('/chabiba/activate-user', [ChabibaController::class, 'activateUser']);
     Route::post('/chabiba/inactivate-user', [ChabibaController::class, 'inactivateUser']);
 });

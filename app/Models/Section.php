@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Event;
+use App\Models\SectionUserRole;
 
 class Section extends Model
 {
@@ -17,6 +20,16 @@ public function users()
         ->withPivot('role_id')
         ->withTimestamps();
 }
+
+ public function events()
+    {
+        return $this->belongsToMany(Event::class, 'event_section');
+    }
+
+    public function userRoles()
+    {
+        return $this->hasMany(SectionUserRole::class);
+    }
 
 }
 
