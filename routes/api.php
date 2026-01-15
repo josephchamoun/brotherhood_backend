@@ -52,9 +52,10 @@ Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'up
     //Get all Sections
     Route::middleware('auth:sanctum')->get('/sections', [SectionController::class, 'index']);
 
-Route::middleware('auth:sanctum')->group(function () {
+    //Events
+    Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events', [EventController::class, 'index']);
-    Route::post('/events', [EventController::class, 'store']);
+    Route::post('/addevent', [EventController::class, 'store']);
     Route::put('/events/{id}/details', [EventController::class, 'updateDetails']);
     Route::put('/events/{id}/financials', [EventController::class, 'updateFinancials']);
     Route::delete('/events/{id}', [EventController::class, 'destroy']);

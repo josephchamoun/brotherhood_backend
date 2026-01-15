@@ -81,15 +81,16 @@ public function sections()
     }
 
     public function activeSectionRoles()
-        {
-            return $this->sectionRoles()->whereNull('end_date');
-        }
-
-        public function roles()
     {
-        return $this->belongsToMany(Role::class, 'chabiba_user_roles')
+        return $this->sectionRoles()->whereNull('end_date');
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'section_user_roles')
             ->withPivot('section_id', 'start_date', 'end_date')
             ->withTimestamps();
     }
+
 
 }
