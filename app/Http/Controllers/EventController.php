@@ -174,6 +174,7 @@ class EventController extends Controller
     private function isHighAdmin($user)
     {
         return $user->is_global_admin;
+        
     }
 
 private function hasActiveRole($user, $roleName, $sectionId)

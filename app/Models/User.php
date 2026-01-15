@@ -24,7 +24,8 @@ class User extends Authenticatable
     'phone',
     'password',
     'created_by',
-    'is_global_admin'
+    'is_global_admin',
+    'is_super_admin',
 ];
 
 
@@ -91,6 +92,17 @@ public function sections()
             ->withPivot('section_id', 'start_date', 'end_date')
             ->withTimestamps();
     }
+
+    public function isSuperAdmin(): bool
+{
+    return $this->is_super_admin === true;
+}
+
+public function isGlobalAdmin(): bool
+{
+    return $this->is_global_admin === true || $this->isSuperAdmin();
+}
+
 
 
 }

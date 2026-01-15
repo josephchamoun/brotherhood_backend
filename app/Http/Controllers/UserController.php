@@ -31,6 +31,7 @@ public function index()
                 'email',
                 'phone',
                 'is_global_admin',
+                'is_super_admin',
                 'created_by'
             )
             ->orderBy('name')
@@ -39,35 +40,51 @@ public function index()
 }
 
 
-        public function store(Request $request)
-    {
-        $authUser = auth()->user();
+public function store(Request $request)
+{
+    $authUser = auth()->user();
 
-        // 🔒 Only global admins can create users
-        if (!$authUser->is_global_admin) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:20',
-            'password' => 'required|string|min:8',
-            'is_global_admin' => 'boolean'
-        ]);
-
-        $newUser = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'password' => bcrypt($validated['password']),
-            'is_global_admin' => $validated['is_global_admin'] ?? false,
-            'created_by' => $authUser->id,
-        ]);
-            Cache::forget('users.index');
-
-        return response()->json($newUser, 201);
+    if (!$authUser) {
+        abort(401);
     }
+
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email',
+        'phone' => 'nullable|string|max:20',
+        'password' => 'required|string|min:8',
+        'is_global_admin' => 'boolean'
+    ]);
+
+    // 🔒 Only SUPER ADMIN can create global admins
+    if (
+        ($validated['is_global_admin'] ?? false) &&
+        !$authUser->isSuperAdmin()
+    ) {
+        return response()->json([
+            'error' => 'Only super admin can create global admins'
+        ], 403);
+    }
+
+    // 🔒 Only global admins or super admin can create users at all
+    if (!$authUser->isGlobalAdmin() && !$authUser->isSuperAdmin()) {
+        abort(403, 'Unauthorized');
+    }
+
+    $newUser = User::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'phone' => $validated['phone'] ?? null,
+        'password' => bcrypt($validated['password']),
+        'is_global_admin' => $validated['is_global_admin'] ?? false,
+        'created_by' => $authUser->id,
+    ]);
+
+    Cache::forget('users.index');
+
+    return response()->json($newUser, 201);
+}
+
 
     public function profile($id)
 {
@@ -189,6 +206,7 @@ public function show(Request $request)
         'email' => $user->email,
         'phone' => $user->phone,
         'is_global_admin' => (bool) $user->is_global_admin,
+        'is_super_admin'=> (bool) $user->is_super_admin,
 
         // Format roles cleanly
         'roles' => $user->sectionRoles->map(function ($r) {
@@ -232,17 +250,34 @@ public function show(Request $request)
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
+public function destroy($id)
+{
+    $authUser = auth()->user();
+    $user = User::findOrFail($id);
 
-        $user->delete();
-            Cache::forget('users.index');
-        return response()->json(['message' => 'User deleted successfully']);
+    // ❌ No one deletes super admin
+    if ($user->is_super_admin) {
+        abort(403, 'Cannot delete super admin');
     }
+
+    // 🔒 Deleting global admins → SUPER ADMIN ONLY
+    if ($user->is_global_admin && !$authUser->isSuperAdmin()) {
+        abort(403, 'Only super admin can delete global admins');
+    }
+
+    // 🔒 Deleting normal users → global admin OR super admin
+    if (
+        !$user->is_global_admin &&
+        !$authUser->isGlobalAdmin() &&
+        !$authUser->isSuperAdmin()
+    ) {
+        abort(403);
+    }
+
+    $user->delete();
+Cache::forget('users.index');
+    return response()->json(['success' => true]);
+}
 
     public function login(Request $request)
     {
