@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Section;
 use App\Models\Role;
+use App\Models\Event;
 use App\Models\SectionUserRole;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ public function index()
                 'name',
                 'email',
                 'phone',
+                'date_of_birth',
                 'is_global_admin',
                 'is_super_admin',
                 'created_by'
@@ -52,6 +54,7 @@ public function store(Request $request)
         'name' => 'required|string|max:255',
         'email' => 'required|email|unique:users,email',
         'phone' => 'nullable|string|max:20',
+        'date_of_birth' => 'nullable|date',
         'password' => 'required|string|min:8',
         'is_global_admin' => 'boolean'
     ]);
@@ -75,6 +78,7 @@ public function store(Request $request)
         'name' => $validated['name'],
         'email' => $validated['email'],
         'phone' => $validated['phone'] ?? null,
+        'date_of_birth' => $validated['date_of_birth'] ?? null,
         'password' => bcrypt($validated['password']),
         'is_global_admin' => $validated['is_global_admin'] ?? false,
         'created_by' => $authUser->id,
@@ -117,6 +121,7 @@ public function updateProfile(Request $request, $id)
         'name' => 'required|string|max:255',
         'email' => ['required','email', Rule::unique('users')->ignore($user->id)],
         'phone' => 'nullable|string|max:20',
+        'date_of_birth' => 'nullable|date',
         'password' => 'nullable|min:8'
     ]);
 
@@ -341,6 +346,16 @@ Cache::forget('users.index');
 
         return response()->json(['message' => 'User added to section successfully']);
     }
+
+
+    public function stats()
+{
+    return response()->json([
+        'total_users' => User::count(),
+        'total_events' => Event::count(),
+
+    ]);
+}
 
 
 

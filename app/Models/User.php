@@ -26,6 +26,7 @@ class User extends Authenticatable
     'created_by',
     'is_global_admin',
     'is_super_admin',
+    'date_of_birth',
 ];
 
 

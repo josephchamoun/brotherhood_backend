@@ -13,6 +13,7 @@ use App\Http\Controllers\ForsanController;
 
 
 
+Route::get('/stats', [UserController::class, 'stats']);
 
 
 
