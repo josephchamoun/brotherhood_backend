@@ -84,3 +84,10 @@ Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'up
 });
 
 });
+
+
+// shops
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/shops', [ShopController::class, 'index']);
+    Route::post('/shops', [ShopController::class, 'store']);
+});

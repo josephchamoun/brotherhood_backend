@@ -26,17 +26,46 @@ class ShopController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        $shop = Shop::create([
-        'name' => $request->name,
-        'phone_number' => $request->phone_number,
-        'place' => $request->place,
-        'description' => $request->description,
+public function store(Request $request)
+{
+    $user = auth()->user();
+    if (!$user) abort(401, 'Unauthenticated');
 
-    ]);
-    return response()->json($shop);
+    // Allowed roles
+    $allowedRoles = [
+        'Chabiba President',
+        'Forsan President',
+        'Tala2e3 President',
+        'Ne2b al Ra2is',
+    ];
+
+    $isAllowed = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) =>
+            $q->whereIn('name', $allowedRoles)
+        )
+        ->exists() || $user->is_global_admin;
+
+    
+    if (!$isAllowed) {
+        abort(403, 'You are not allowed to add shops');
     }
+
+    $data = $request->validate([
+        'name' => 'required|string|max:255',
+        'place' => 'required|string|max:255',
+        'phone_number' => 'nullable|string|max:50',
+        'description' => 'nullable|string',
+    ]);
+
+    $shop = Shop::create([
+        ...$data,
+        'created_by' => $user->id,
+    ]);
+
+    return response()->json($shop, 201);
+}
+
 
     /**
      * Display the specified resource.

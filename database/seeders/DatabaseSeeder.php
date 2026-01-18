@@ -5,6 +5,7 @@ namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -18,7 +19,7 @@ public function run(): void
         SectionsSeeder::class,
         UsersSeeder::class,
         Role2Seeder::class,*/
-        EventsSeeder::class,
+        ShopsSeeder::class,
     ]);
 }
 
