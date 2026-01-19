@@ -119,29 +119,48 @@ class EventController extends Controller
      * Update event details (title, description, notes, drive_link)
      */
     public function updateDetails(Request $request, $id)
-    {
-        $user = auth()->user();
-        if (!$user) {
-            abort(401, 'Unauthenticated');
-        }
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
+    }
 
-        $event = Event::with('sections')->findOrFail($id);
+    $event = Event::with('sections')->findOrFail($id);
 
-        if (!$this->canEditDetails($user, $event)) {
-            return abort(403, 'You cannot edit details for this event');
-        }
-
-        $event->update([
-            'title' => $request->title,
-            'description' => $request->description,
-            'event_date' => $request->event_date,
-            'type' => $request->type,
-            'notes' => $request->notes,
-            'drive_link' => $request->drive_link,
+    // Special case: Wakil Tanchi2a → description ONLY
+    if ($this->isWakilTanchi2a($user, $event)) {
+        $request->validate([
+            'description' => 'nullable|string',
         ]);
 
-        return response()->json(['success' => true, 'event' => $event]);
+        $event->update([
+            'description' => $request->description ?? '',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'event' => $event,
+            'role' => 'wakil wanchi2a',
+        ]);
     }
+
+    // Normal permission check for other roles
+    if (!$this->canEditDetails($user, $event)) {
+        abort(403, 'You cannot edit details for this event');
+    }
+
+    $event->update([
+        'title' => $request->title,
+        'description' => $request->description,
+        'event_date' => $request->event_date,
+        'type' => $request->type,
+        'notes' => $request->notes,
+        'drive_link' => $request->drive_link,
+    ]);
+
+    return response()->json(['success' => true, 'event' => $event]);
+}
+
 
     /**
      * Update event financials (total_spent, total_revenue)
@@ -286,4 +305,25 @@ private function hasActiveRole($user, $roleName, $sectionId)
 
         return false;
     }
+
+    private function isWakilTanchi2a($user, Event $event)
+{
+    if ($this->isHighAdmin($user)) {
+        return false; // High admins already have full access
+    }
+
+    // Shared events → Wakil Tanchi2a NOT allowed
+    if ($this->isSharedEvent($event)) {
+        return false;
+    }
+
+    foreach ($event->sections as $section) {
+        if ($this->hasActiveRole($user, 'wakil tanchi2a', $section->id)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 }

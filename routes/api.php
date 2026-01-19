@@ -11,6 +11,7 @@ use App\Http\Controllers\ChabibaController;
 use App\Http\Controllers\Tala2e3Controller;
 use App\Http\Controllers\ForsanController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\MeetingController;
 
 
 Route::get('/stats', [UserController::class, 'stats']);
@@ -97,4 +98,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/contacts', [ContactController::class, 'index']);
     Route::post('/contacts', [ContactController::class, 'store']);
 });
+
+//Meetings
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/meetings', [MeetingController::class, 'index']);
+    Route::post('/meetings', [MeetingController::class, 'store']);
+});
+
 

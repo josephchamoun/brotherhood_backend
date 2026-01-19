@@ -19,7 +19,7 @@ public function run(): void
         SectionsSeeder::class,
         UsersSeeder::class,
         Role2Seeder::class,*/
-        ShopsSeeder::class,
+        MeetingsTableSeeder::class,
     ]);
 }
 

@@ -30,6 +30,11 @@ public function users()
     {
         return $this->hasMany(SectionUserRole::class);
     }
+    public function meetings()
+{
+    return $this->hasMany(Meeting::class);
+}
+
 
 }
 
