@@ -37,6 +37,7 @@ public function store(Request $request)
         'Forsan President',
         'Tala2e3 President',
         'Ne2b al Ra2is',
+        'Amin sandou2',
     ];
 
     $isAllowed = $user->sectionRoles()
