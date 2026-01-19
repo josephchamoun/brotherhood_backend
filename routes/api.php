@@ -10,7 +10,7 @@ use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ChabibaController;
 use App\Http\Controllers\Tala2e3Controller;
 use App\Http\Controllers\ForsanController;
-
+use App\Http\Controllers\ContactController;
 
 
 Route::get('/stats', [UserController::class, 'stats']);
@@ -91,3 +91,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shops', [ShopController::class, 'index']);
     Route::post('/shops', [ShopController::class, 'store']);
 });
+
+//contacts
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/contacts', [ContactController::class, 'index']);
+    Route::post('/contacts', [ContactController::class, 'store']);
+});
+
