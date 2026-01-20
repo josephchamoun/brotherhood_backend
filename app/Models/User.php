@@ -76,6 +76,18 @@ public function sections()
             ->where('section_id', 1)
             ->orderBy('start_date', 'desc');
     }
+        public function tala2e3Roles()
+    {
+        return $this->hasMany(SectionUserRole::class)
+            ->where('section_id', 2)
+            ->orderBy('start_date', 'desc');
+    }
+        public function forsanRoles()
+    {
+        return $this->hasMany(SectionUserRole::class)
+            ->where('section_id', 3)
+            ->orderBy('start_date', 'desc');
+    }
 
     public function sectionRoles()
     {

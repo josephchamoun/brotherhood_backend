@@ -10,12 +10,8 @@ use App\Models\Section;
 class Meeting extends Model
 {
     use HasFactory;
-       protected $fillable = [
-        'section_id',
-        'title',
-        'drive_link',
-        'created_by',
-    ];
+protected $fillable = ['section_id', 'title', 'drive_link', 'created_by'];
+
 
     public function section()
     {

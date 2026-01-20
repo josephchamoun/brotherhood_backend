@@ -74,9 +74,12 @@ Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'up
     Route::post('/chabiba/inactivate-user', [ChabibaController::class, 'inactivateUser']);
 });
     Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/tala2e3-role', [Tala2e3Controller::class, 'index']);
+Route::get('/tala2e3-role', [Tala2e3Controller::class, 'index']);
     Route::post('/tala2e3/assign-role', [Tala2e3Controller::class, 'assignRole']);
     Route::post('/tala2e3/remove-role', [Tala2e3Controller::class, 'removeRole']);
+    Route::post('/tala2e3/end-role', [Tala2e3Controller::class, 'endRole']);
+        Route::post('/tala2e3/activate-user', [Tala2e3Controller::class, 'activateUser']);
+    Route::post('/tala2e3/inactivate-user', [Tala2e3Controller::class, 'inactivateUser']);
 });
     Route::middleware('auth:sanctum')->group(function () {
     Route::get('/forsan-role', [ForsanController::class, 'index']);
@@ -102,7 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
 //Meetings
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/meetings', [MeetingController::class, 'index']);
-    Route::post('/meetings', [MeetingController::class, 'store']);
+    Route::post('/addmeetinglink', [MeetingController::class, 'store']);
 });
 
 
