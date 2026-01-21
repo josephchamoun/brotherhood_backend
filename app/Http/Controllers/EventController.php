@@ -101,6 +101,8 @@ class EventController extends Controller
         'total_revenue' => $request->total_revenue ?? 0,
         'notes' => $request->notes ?? '',
         'drive_link' => $request->drive_link ?? '',
+        'photo_link' => $request->photo_link ?? '',
+        
         'created_by' => $user->id,
     ]);
 
@@ -156,6 +158,7 @@ class EventController extends Controller
         'type' => $request->type,
         'notes' => $request->notes,
         'drive_link' => $request->drive_link,
+        'photo_link' => $request->photo_link,
     ]);
 
     return response()->json(['success' => true, 'event' => $event]);

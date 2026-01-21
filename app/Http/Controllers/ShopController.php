@@ -95,8 +95,40 @@ public function store(Request $request)
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        //
+public function destroy(string $id)
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
     }
+
+    // Allowed roles
+    $allowedRoles = [
+        'Chabiba President',
+        'Forsan President',
+        'Tala2e3 President',
+        'Ne2b al Ra2is',
+        'Amin sandou2',
+    ];
+
+    $isAllowed = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) =>
+            $q->whereIn('name', $allowedRoles)
+        )
+        ->exists() || $user->is_global_admin;
+
+    if (!$isAllowed) {
+        abort(403, 'You are not allowed to delete shops');
+    }
+
+    $shop = Shop::findOrFail($id);
+
+    $shop->delete();
+
+    return response()->json([
+        'message' => 'Shop deleted successfully'
+    ], 200);
+}
+
 }

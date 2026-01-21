@@ -94,6 +94,10 @@ Route::get('/tala2e3-role', [Tala2e3Controller::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shops', [ShopController::class, 'index']);
     Route::post('/shops', [ShopController::class, 'store']);
+   
+    Route::delete('/shops/{id}', [ShopController::class, 'destroy']);
+
+
 });
 
 //contacts
@@ -101,6 +105,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/contacts', [ContactController::class, 'index']);
     Route::post('/contacts', [ContactController::class, 'store']);
 });
+Route::delete('/contacts/{id}', [ContactController::class, 'destroy'])
+    ->middleware('auth:sanctum');
+
 
 //Meetings
 Route::middleware('auth:sanctum')->group(function () {

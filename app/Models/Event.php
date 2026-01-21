@@ -9,7 +9,7 @@ class Event extends Model
 {
     protected $fillable = [
         'title','description','event_date','type',
-        'total_spent','total_revenue','notes','drive_link','created_by'
+        'total_spent','total_revenue','notes','drive_link','created_by','photo_link',
     ];
 
     public function sections()

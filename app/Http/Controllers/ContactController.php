@@ -76,8 +76,38 @@ class ContactController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        //
+public function destroy(string $id)
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
     }
+
+    $allowedRoles = [
+        'Wakil Risele',
+        'Ne2b al Ra2is',
+        'Chabiba President',
+        'Forsan President',
+        'Tala2e3 President',
+    ];
+
+    $isAllowed = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) =>
+            $q->whereIn('name', $allowedRoles)
+        )
+        ->exists() || $user->is_global_admin;
+
+    if (!$isAllowed) {
+        abort(403, 'You are not allowed to delete contacts');
+    }
+
+    $contact = Contact::findOrFail($id);
+    $contact->delete();
+
+    return response()->json([
+        'message' => 'Contact deleted successfully'
+    ], 200);
+}
+
 }
