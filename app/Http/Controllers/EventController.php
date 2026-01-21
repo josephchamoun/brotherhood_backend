@@ -246,45 +246,61 @@ private function hasActiveRole($user, $roleName, $sectionId)
     }
 
     private function canEditDetails($user, Event $event)
-    {
-        if ($this->isHighAdmin($user)) return true;
+{
+    if ($this->isHighAdmin($user)) return true;
 
-        // Shared events → only Chabiba leadership
-        if ($this->isSharedEvent($event)) {
-            return
-                $this->hasActiveRole($user, 'President', 1) ||
-                $this->hasActiveRole($user, 'Ne2b al Ra2is', 1) ||
-                $this->hasActiveRole($user, 'Amin Ser', 1);
-        }
+    $presidentRoles = [
+        'Chabiba President',
+        'Forsan President',
+        'Tala2e3 President',
+    ];
 
-        foreach ($event->sections as $section) {
-            $sid = $section->id;
-
-            // Presidents & Ne2b always allowed
-            if (
-                $this->hasActiveRole($user, 'President', $sid) ||
-                $this->hasActiveRole($user, 'Ne2b al Ra2is', $sid)
-            ) {
-                return true;
-            }
-
-            // Amin Ser can edit details only in his own section
-            if ($this->hasActiveRole($user, 'Amin Ser', $sid)) {
-                return true;
-            }
-        }
-
-        return false;
+    // Shared events → only Chabiba leadership
+    if ($this->isSharedEvent($event)) {
+        return
+            $this->hasActiveRole($user, 'Chabiba President', 1) ||
+            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1) ||
+            $this->hasActiveRole($user, 'Amin Ser', 1);
     }
+
+    foreach ($event->sections as $section) {
+        $sid = $section->id;
+
+        // Presidents & Ne2b always allowed
+        foreach ($presidentRoles as $role) {
+            if ($this->hasActiveRole($user, $role, $sid)) {
+                return true;
+            }
+        }
+
+        if ($this->hasActiveRole($user, 'Ne2b al Ra2is', $sid)) {
+            return true;
+        }
+
+        // Amin Ser allowed in his own section
+        if ($this->hasActiveRole($user, 'Amin Ser', $sid)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
     private function canEditFinancials($user, Event $event)
     {
         if ($this->isHighAdmin($user)) return true;
 
+        $presidentRoles = [
+            'Chabiba President',
+            'Forsan President',
+            'Tala2e3 President',
+        ];
+
         // Shared events → only Chabiba leadership
         if ($this->isSharedEvent($event)) {
             return
-                $this->hasActiveRole($user, 'President', 1) ||
+                $this->hasActiveRole($user, 'Chabiba President', 1) ||
                 $this->hasActiveRole($user, 'Ne2b al Ra2is', 1) ||
                 $this->hasActiveRole($user, 'Amin Sandou2', 1);
         }
@@ -293,14 +309,17 @@ private function hasActiveRole($user, $roleName, $sectionId)
             $sid = $section->id;
 
             // Presidents & Ne2b always allowed
-            if (
-                $this->hasActiveRole($user, 'President', $sid) ||
-                $this->hasActiveRole($user, 'Ne2b al Ra2is', $sid)
-            ) {
+            foreach ($presidentRoles as $role) {
+                if ($this->hasActiveRole($user, $role, $sid)) {
+                    return true;
+                }
+            }
+
+            if ($this->hasActiveRole($user, 'Ne2b al Ra2is', $sid)) {
                 return true;
             }
 
-            // Amin Sandou2 can edit financials only in his own section
+            // Amin Sandou2 allowed only in his section
             if ($this->hasActiveRole($user, 'Amin Sandou2', $sid)) {
                 return true;
             }
@@ -308,6 +327,7 @@ private function hasActiveRole($user, $roleName, $sectionId)
 
         return false;
     }
+
 
     private function isWakilTanchi2a($user, Event $event)
 {

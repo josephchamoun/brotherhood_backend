@@ -45,17 +45,29 @@ public function index()
     ]);
 }
 
+private function canManageForsan($user)
+{
+    if (!$user) return false;
+
+    if ($user->is_global_admin) return true;
+
+    // Check if the user has Tala2e3 President or Ne2b al Ra2is in section 2
+    return $user->roles()->where('section_id', 3)
+                 ->whereIn('role_id', [4, 9])
+                 ->whereNull('end_date')
+                 ->exists();
+}
+
 
 
 
 public function assignRole(Request $request)
 {
     $authUser = auth()->user();
-
-    // 🔒 Only global admins can assign roles
-    if (!$authUser->is_global_admin) {
+    if (!$this->canManageForsan($authUser)) {
         return response()->json(['error' => 'Unauthorized'], 403);
     }
+
 
     // ✅ Validate input strictly
     $validated = $request->validate([
@@ -82,16 +94,16 @@ public function assignRole(Request $request)
         ], 409);
     }
       //  Check if other users already has this role active
-$roleTaken = SectionUserRole::where('section_id', $sectionId)
-    ->where('role_id', $roleId)
-    ->whereNull('end_date') // only active roles
-    ->exists(); // check if **any** user has it
+    $roleTaken = SectionUserRole::where('section_id', $sectionId)
+        ->where('role_id', $roleId)
+        ->whereNull('end_date') // only active roles
+        ->exists(); // check if **any** user has it
 
-if ($roleTaken) {
-    return response()->json([
-        'message' => 'This role is already assigned to another user in this section'
-    ], 409);
-}
+    if ($roleTaken) {
+        return response()->json([
+            'message' => 'This role is already assigned to another user in this section'
+        ], 409);
+    }
 
     // 2️⃣ Close any existing active role for this section
     SectionUserRole::where('user_id', $userId)
@@ -132,8 +144,7 @@ if ($roleTaken) {
 public function endRole(Request $request)
 {
     $authUser = auth()->user();
-
-    if (!$authUser || !$authUser->is_global_admin) {
+    if (!$this->canManageForsan($authUser)) {
         return response()->json(['error' => 'Unauthorized'], 403);
     }
 
@@ -190,6 +201,10 @@ public function endRole(Request $request)
 
 public function activateUser(Request $request)
 {
+        $authUser = auth()->user();
+    if (!$this->canManageForsan($authUser)) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
     $request->validate([
         'user_id' => 'required|exists:users,id',
         'section_id' => 'sometimes|exists:sections,id',
@@ -251,6 +266,13 @@ public function activateUser(Request $request)
 
 public function inactivateUser(Request $request)
 {
+
+    $authUser = auth()->user();
+    
+    if (!$this->canManageForsan($authUser)) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
     $request->validate([
         'user_id' => 'required|exists:users,id',
     ]);
