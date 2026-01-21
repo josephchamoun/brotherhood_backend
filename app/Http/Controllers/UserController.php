@@ -116,6 +116,10 @@ public function updateProfile(Request $request, $id)
     }
 
     $user = User::findOrFail($id);
+    
+    if(!$auth->is_super_admin && $user->is_super_admin ){
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
 
     $validated = $request->validate([
         'name' => 'required|string|max:255',

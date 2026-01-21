@@ -12,7 +12,7 @@ use App\Http\Controllers\Tala2e3Controller;
 use App\Http\Controllers\ForsanController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MeetingController;
-
+use App\Http\Controllers\DriveAccountController;
 
 Route::get('/stats', [UserController::class, 'stats']);
 
@@ -82,9 +82,12 @@ Route::get('/tala2e3-role', [Tala2e3Controller::class, 'index']);
     Route::post('/tala2e3/inactivate-user', [Tala2e3Controller::class, 'inactivateUser']);
 });
     Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/forsan-role', [ForsanController::class, 'index']);
+Route::get('/forsan-role', [ForsanController::class, 'index']);
     Route::post('/forsan/assign-role', [ForsanController::class, 'assignRole']);
     Route::post('/forsan/remove-role', [ForsanController::class, 'removeRole']);
+    Route::post('/forsan/end-role', [ForsanController::class, 'endRole']);
+        Route::post('/forsan/activate-user', [ForsanController::class, 'activateUser']);
+    Route::post('/forsan/inactivate-user', [ForsanController::class, 'inactivateUser']);
 });
 
 });
@@ -113,6 +116,27 @@ Route::delete('/contacts/{id}', [ContactController::class, 'destroy'])
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/meetings', [MeetingController::class, 'index']);
     Route::post('/addmeetinglink', [MeetingController::class, 'store']);
+});
+
+//drive accounts
+Route::middleware('auth:sanctum')->group(function () {
+
+    // 🔹 Get all drive accounts
+    Route::get('/drive-accounts', [DriveAccountController::class, 'index']);
+
+    // 🔹 Create new drive account
+    Route::post('/drive-accounts', [DriveAccountController::class, 'store']);
+
+    // 🔹 Get single drive account (with plain password)
+    Route::get('/drive-accounts/{id}', [DriveAccountController::class, 'show']);
+
+    // 🔹 Update drive account
+    Route::put('/drive-accounts/{id}', [DriveAccountController::class, 'update']);
+    Route::patch('/drive-accounts/{id}', [DriveAccountController::class, 'update']);
+
+    // 🔹 Delete drive account
+    Route::delete('/drive-accounts/{id}', [DriveAccountController::class, 'destroy']);
+
 });
 
 
