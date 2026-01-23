@@ -63,25 +63,27 @@ return [
             ]) : [],
         ],
 
-'pgsql' => [
-    'driver' => 'pgsql',
-    'host' => env('DB_HOST'),
-    'port' => env('DB_PORT', '5432'),
-    'database' => env('DB_DATABASE'),
-    'username' => env('DB_USERNAME'),
-    'password' => env('DB_PASSWORD'),
-    'charset' => 'utf8',
-    'prefix' => '',
-    'prefix_indexes' => true,
-    'schema' => 'public',
+    'pgsql' => [
+        'driver' => 'pgsql',
+        'host' => env('DB_HOST'),
+        'port' => env('DB_PORT', '5432'),
+        'database' => env('DB_DATABASE'),
+        'username' => env('DB_USERNAME'),
+        'password' => env('DB_PASSWORD'),
+        'charset' => 'utf8',
+        'prefix' => '',
+        'prefix_indexes' => true,
+        'schema' => 'public',
 
-    // 🔑 IMPORTANT
-    'sslmode' => env('DB_SSLMODE', 'require'),
+        
+        'sslmode' => env('DB_SSLMODE', 'require'),
 
-    'options' => extension_loaded('pdo_pgsql') ? array_filter([
-        \PDO::PGSQL_ATTR_SSL_MODE => \PDO::PGSQL_SSL_MODE_REQUIRE,
-    ]) : [],
-],
+'options' => extension_loaded('pdo_pgsql') ? array_filter([
+    defined('PDO::PGSQL_ATTR_SSL_MODE') ? PDO::PGSQL_ATTR_SSL_MODE : null =>
+        defined('PDO::PGSQL_SSL_MODE_REQUIRE') ? PDO::PGSQL_SSL_MODE_REQUIRE : null,
+]) : [],
+
+    ],
 
 
 
