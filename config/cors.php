@@ -19,11 +19,14 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://kfarhawrabrotherhood-jc.vercel.app'],
 
     'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
+    
+    'allowed_methods' => ['*'],
+
 
     'exposed_headers' => [],
 
