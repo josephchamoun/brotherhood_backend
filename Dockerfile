@@ -15,11 +15,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Copy Laravel code
 COPY . .
 
-# Install PHP dependencies, skip scripts to avoid PGSQL constant error
+# Install PHP dependencies, skip scripts
 RUN composer install --no-dev --optimize-autoloader --no-scripts
-
-# Now run package discovery after PHP extensions are loaded
-RUN php artisan package:discover
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
