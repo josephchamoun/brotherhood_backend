@@ -140,3 +140,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
+Route::get('/clear-cache', function() {
+    \Artisan::call('config:clear');
+    \Artisan::call('cache:clear');
+    \Artisan::call('route:clear');
+    
+    return response()->json(['message' => 'Cache cleared successfully!']);
+});
