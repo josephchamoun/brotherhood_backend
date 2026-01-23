@@ -15,24 +15,19 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+   'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://kfarhawrabrotherhood-jc.vercel.app'],
+    'allowed_origins' => ['*'], // Change this to allow all origins temporarily
 
     'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
-    
-    'allowed_methods' => ['*'],
-    
-
 
     'exposed_headers' => [],
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
-
+    'supports_credentials' => false, // Change to false
 ];
