@@ -107,32 +107,49 @@ class DriveAccountController extends Controller
     /**
      * Remove the specified resource.
      */
-    public function destroy(string $id)
-    {
-        $user = auth()->user();
-        if (!$user) {
-            abort(401, 'Unauthenticated');
-        }
-
-        // Allowed roles
-        $allowedRoles = ['Amin Ser'];
-
-        $isAllowed = $user->sectionRoles()
-            ->whereNull('end_date')
-            ->whereHas('role', fn ($q) =>
-                $q->whereIn('name', $allowedRoles)
-            )
-            ->exists() || $user->is_global_admin;
-
-        if (!$isAllowed) {
-            abort(403, 'You are not allowed to delete drive accounts');
-        }
-
-        $account = DriveAccount::findOrFail($id);
-        $account->delete();
-
-        return response()->json([
-            'message' => 'Drive account deleted successfully'
-        ], 200);
+/**
+ * Remove the specified resource.
+ */
+public function destroy(string $id)
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
     }
+
+    $account = DriveAccount::findOrFail($id);
+
+    // Allowed roles
+    $allowedRoles = ['Amin Ser'];
+
+    // Check if user is super/global admin
+    $isAdmin = $user->is_global_admin || $user->is_super_admin;
+
+    // Check if user has permission
+    $hasRole = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) => $q->whereIn('name', $allowedRoles))
+        ->exists();
+
+    // If user is not admin and not allowed
+    if (!$isAdmin && !$hasRole) {
+        abort(403, 'You are not allowed to delete drive accounts');
+    }
+
+    // If user is normal allowed role, check 15-day limit
+    if (!$isAdmin && $hasRole) {
+        $createdAt = $account->created_at;
+        $daysDiff = now()->diffInDays($createdAt);
+
+        if ($daysDiff > 15) {
+            abort(403, 'You cannot delete this drive account after 15 days');
+        }
+    }
+
+    $account->delete();
+
+    return response()->json([
+        'message' => 'Drive account deleted successfully'
+    ], 200);
+}
 }

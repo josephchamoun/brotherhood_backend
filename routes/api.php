@@ -12,7 +12,9 @@ use App\Http\Controllers\Tala2e3Controller;
 use App\Http\Controllers\ForsanController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MoneyboxController;
 use App\Http\Controllers\DriveAccountController;
+use App\Http\Controllers\ElectionController;
 
 Route::get('/stats', [UserController::class, 'stats']);
 
@@ -146,4 +148,16 @@ Route::get('/clear-cache', function() {
     \Artisan::call('route:clear');
     
     return response()->json(['message' => 'Cache cleared successfully!']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+Route::get('/moneyboxes', [MoneyboxController::class, 'index']);
+Route::patch('/moneyboxes/{id}', [MoneyboxController::class, 'update']);
+});
+
+//elections
+Route::middleware('auth:sanctum')->group(function () {
+Route::get('/elections', [ElectionController::class, 'index']);
+Route::post('/elections', [ElectionController::class, 'store']);
+Route::delete('/elections/{id}', [ElectionController::class, 'destroy']);
 });

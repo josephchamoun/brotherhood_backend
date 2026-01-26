@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Event;
 use App\Models\SectionUserRole;
+use App\Models\Meeting;
+use App\Models\Moneybox;
 
 class Section extends Model
 {
@@ -33,6 +35,16 @@ public function users()
     public function meetings()
 {
     return $this->hasMany(Meeting::class);
+}
+
+public function moneyboxes()
+{
+    return $this->hasMany(Moneybox::class);
+}
+
+public function elections()
+{
+return $this->hasMany(Election::class);
 }
 
 
