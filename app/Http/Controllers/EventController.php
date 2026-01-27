@@ -36,7 +36,7 @@ class EventController extends Controller
     /**
      * Create a new event
      */
-   public function store(Request $request)
+  public function store(Request $request)
 {
     $user = auth()->user();
     if (!$user) {
@@ -48,36 +48,39 @@ class EventController extends Controller
     // ---------------------------
     $sections = [];
 
-   if ($this->isHighAdmin($user)) {
-    $sections = $request->input('sections', [1,2,3]); // default to all if nothing selected
+    if ($this->isHighAdmin($user)) {
 
-    // handle "Shared" selection
-    if (in_array(4, $sections)) {
-        $sections = [1,2,3];
-    }
-}
- else {
-        // Check if Chabiba leadership
+        $sections = $request->input('sections', [1, 2, 3]);
+
+        // Handle "Shared"
+        if (in_array(4, $sections)) {
+            $sections = [1, 2, 3];
+        }
+
+    } else {
+
+        // Check Chabiba leadership
         $isChabibaLeader =
             $this->hasActiveRole($user, 'Chabiba President', 1) ||
-            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1);
+            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1)||
+            $this->hasActiveRole($user, 'Amin Ser', 1);
 
         $isSharedRequested = $request->boolean('shared_event');
 
         if ($isChabibaLeader) {
-            if ($isSharedRequested) {
-                $sections = [1, 2, 3]; // shared event
-            } else {
-                $sections = [1]; // chabiba only
-            }
+
+            $sections = $isSharedRequested ? [1, 2, 3] : [1];
+
         } else {
-            // Other sections presidents / na2b
+
+            // Presidents, Ne2b, OR Amin Ser
             $sectionId = $user->sectionRoles()
                 ->whereNull('end_date')
-                ->whereHas('role', fn($q) => $q->whereIn('name', [
+                ->whereHas('role', fn ($q) => $q->whereIn('name', [
                     'Tala2e3 President',
                     'Forsan President',
                     'Ne2b al Ra2is',
+                    'Amin Ser', // ✅ allowed to create
                 ]))
                 ->value('section_id');
 
@@ -90,6 +93,14 @@ class EventController extends Controller
     }
 
     // ---------------------------
+    // Amin Ser check (financial lock)
+    // ---------------------------
+    $isAminSer = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) => $q->where('name', 'Amin Ser'))
+        ->exists();
+
+    // ---------------------------
     // Create event
     // ---------------------------
     $event = Event::create([
@@ -97,12 +108,15 @@ class EventController extends Controller
         'type' => $request->type,
         'description' => $request->description ?? '',
         'event_date' => $request->event_date ?? now(),
-        'total_spent' => $request->total_spent ?? 0,
-        'total_revenue' => $request->total_revenue ?? 0,
+
+        // 🔒 Amin Ser cannot set financials
+        'total_spent' => $isAminSer ? 0 : ($request->total_spent ?? 0),
+        'total_revenue' => $isAminSer ? 0 : ($request->total_revenue ?? 0),
+
         'notes' => $request->notes ?? '',
         'drive_link' => $request->drive_link ?? '',
         'photo_link' => $request->photo_link ?? '',
-        
+
         'created_by' => $user->id,
     ]);
 
