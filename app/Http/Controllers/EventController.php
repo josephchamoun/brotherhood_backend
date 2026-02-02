@@ -36,7 +36,7 @@ class EventController extends Controller
     /**
      * Create a new event
      */
-  public function store(Request $request)
+public function store(Request $request)
 {
     $user = auth()->user();
     if (!$user) {
@@ -44,58 +44,60 @@ class EventController extends Controller
     }
 
     // ---------------------------
-    // Determine sections automatically
+    // Detect roles
     // ---------------------------
-    $sections = [];
+    $isHighAdmin = $this->isHighAdmin($user);
 
-    if ($this->isHighAdmin($user)) {
+    // Chabiba leaders in section 1 = full freedom
+    $isChabibaLeaderSection1 = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->where('section_id', 1)
+        ->whereHas('role', fn ($q) => $q->whereIn('name', [
+            'Chabiba President',
+            'Ne2b al Ra2is',
+            'Amin Ser',
+        ]))
+        ->exists();
 
+    // Any leader in any section (for sections 2 & 3 case)
+    $leaderSectionId = $user->sectionRoles()
+        ->whereNull('end_date')
+        ->whereHas('role', fn ($q) => $q->whereIn('name', [
+            'Tala2e3 President',
+            'Forsan President',
+            'Ne2b al Ra2is',
+            'Amin Ser',
+        ]))
+        ->value('section_id'); // returns 2 or 3 (or null)
+
+    // ---------------------------
+    // Determine sections
+    // ---------------------------
+    if ($isHighAdmin || $isChabibaLeaderSection1) {
+
+        // Full freedom
         $sections = $request->input('sections', [1, 2, 3]);
 
-        // Handle "Shared"
+        // Handle "Shared" = 4
         if (in_array(4, $sections)) {
             $sections = [1, 2, 3];
         }
 
+    } elseif ($leaderSectionId) {
+
+        // Leaders of section 2 or 3: ONLY their own section
+        $sections = [$leaderSectionId];
+
     } else {
 
-        // Check Chabiba leadership
-        $isChabibaLeader =
-            $this->hasActiveRole($user, 'Chabiba President', 1) ||
-            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1)||
-            $this->hasActiveRole($user, 'Amin Ser', 1);
-
-        $isSharedRequested = $request->boolean('shared_event');
-
-        if ($isChabibaLeader) {
-
-            $sections = $isSharedRequested ? [1, 2, 3] : [1];
-
-        } else {
-
-            // Presidents, Ne2b, OR Amin Ser
-            $sectionId = $user->sectionRoles()
-                ->whereNull('end_date')
-                ->whereHas('role', fn ($q) => $q->whereIn('name', [
-                    'Tala2e3 President',
-                    'Forsan President',
-                    'Ne2b al Ra2is',
-                    'Amin Ser', // ✅ allowed to create
-                ]))
-                ->value('section_id');
-
-            if (!$sectionId) {
-                abort(403, 'You are not allowed to create events');
-            }
-
-            $sections = [$sectionId];
-        }
+        // Not allowed
+        abort(403, 'You are not allowed to create events');
     }
 
     // ---------------------------
-    // Amin Ser check (financial lock)
+    // Amin Ser financial lock
     // ---------------------------
-    $isAminSer = $user->sectionRoles()
+    $isAnyAminSer = $user->sectionRoles()
         ->whereNull('end_date')
         ->whereHas('role', fn ($q) => $q->where('name', 'Amin Ser'))
         ->exists();
@@ -109,9 +111,9 @@ class EventController extends Controller
         'description' => $request->description ?? '',
         'event_date' => $request->event_date ?? now(),
 
-        // 🔒 Amin Ser cannot set financials
-        'total_spent' => $isAminSer ? 0 : ($request->total_spent ?? 0),
-        'total_revenue' => $isAminSer ? 0 : ($request->total_revenue ?? 0),
+        // 🔒 Any Amin Ser cannot set financials
+        'total_spent' => $isAnyAminSer ? 0 : ($request->total_spent ?? 0),
+        'total_revenue' => $isAnyAminSer ? 0 : ($request->total_revenue ?? 0),
 
         'notes' => $request->notes ?? '',
         'drive_link' => $request->drive_link ?? '',
@@ -130,6 +132,7 @@ class EventController extends Controller
         'event' => $event->load('sections'),
     ]);
 }
+
 
     /**
      * Update event details (title, description, notes, drive_link)
