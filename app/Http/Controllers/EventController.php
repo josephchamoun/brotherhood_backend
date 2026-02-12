@@ -15,23 +15,28 @@ class EventController extends Controller
         return response()->json($events);
     }
 
-    public function destroy($id)
-    {
-        $user = auth()->user();
-        if (!$user) {
-            abort(401, 'Unauthenticated');
-        }
-
-        $event = Event::findOrFail($id);
-
-        // Only High Admin or President of event sections can delete
-        if (!$this->isHighAdmin($user) && !$this->canEditDetails($user, $event)) {
-            return abort(403, 'Not authorized to delete this event');
-        }
-
-        $event->delete();
-        return response()->json(['success' => true]);
+public function destroy($id)
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
     }
+
+    $event = Event::findOrFail($id);
+
+    // ✅ Only High Admin OR Amin Ser of Chabiba (section 1) can delete
+    if (
+        !$this->isHighAdmin($user) &&
+        !$this->hasActiveRole($user, 'Amin Ser', 1)
+    ) {
+        abort(403, 'Not authorized to delete this event');
+    }
+
+    $event->delete();
+
+    return response()->json(['success' => true]);
+}
+
 
     /**
      * Create a new event
@@ -266,35 +271,40 @@ private function hasActiveRole($user, $roleName, $sectionId)
 {
     if ($this->isHighAdmin($user)) return true;
 
+    // ✅ NEW: Amin Ser of Chabiba (section 1) can edit ALL events
+    if ($this->hasActiveRole($user, 'Amin Ser', 1)) {
+        return true;
+    }
+
     $presidentRoles = [
         'Chabiba President',
         'Forsan President',
         'Tala2e3 President',
     ];
 
-    // Shared events → only Chabiba leadership
+    // Shared events → only Chabiba leadership (but Amin Ser 1 already passed above)
     if ($this->isSharedEvent($event)) {
         return
             $this->hasActiveRole($user, 'Chabiba President', 1) ||
-            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1) ||
-            $this->hasActiveRole($user, 'Amin Ser', 1);
+            $this->hasActiveRole($user, 'Ne2b al Ra2is', 1);
     }
 
     foreach ($event->sections as $section) {
         $sid = $section->id;
 
-        // Presidents & Ne2b always allowed
+        // Presidents always allowed
         foreach ($presidentRoles as $role) {
             if ($this->hasActiveRole($user, $role, $sid)) {
                 return true;
             }
         }
 
+        // Ne2b always allowed
         if ($this->hasActiveRole($user, 'Ne2b al Ra2is', $sid)) {
             return true;
         }
 
-        // Amin Ser allowed in his own section
+        // Amin Ser allowed ONLY in his own section (except section 1 which is global, handled above)
         if ($this->hasActiveRole($user, 'Amin Ser', $sid)) {
             return true;
         }
@@ -302,6 +312,7 @@ private function hasActiveRole($user, $roleName, $sectionId)
 
     return false;
 }
+
 
 
     private function canEditFinancials($user, Event $event)
