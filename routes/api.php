@@ -27,6 +27,7 @@ Route::get('/stats', [UserController::class, 'stats']);
 
 
     //Users
+        Route::get('/usersmobile', [UserController::class, 'index']);
         Route::middleware('auth:sanctum')->get('/users', [UserController::class, 'index']);
     Route::middleware('auth:sanctum')->get('/me', [UserController::class, 'show']);
     Route::middleware('auth:sanctum')->delete('/user/delete/{id}', [UserController::class, 'destroy']);
@@ -57,6 +58,8 @@ Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'up
     Route::middleware('auth:sanctum')->get('/sections', [SectionController::class, 'index']);
 
     //Events
+    Route::get('/eventsmobile', [EventController::class, 'index']);
+
     Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events', [EventController::class, 'index']);
     Route::post('/addevent', [EventController::class, 'store']);
