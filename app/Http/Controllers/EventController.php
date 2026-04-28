@@ -6,14 +6,37 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
 {
-    public function index()
-    {
-        $events = Event::with('creator', 'sections')->get(); // eager load relations
-        return response()->json($events);
+
+
+
+
+public function index(Request $request)
+{
+    // Calculate the true last_updated for events
+    // (includes pivot table so section changes are detected)
+    $eventsMax  = DB::table('events')->max('updated_at');
+    $pivotMax   = DB::table('event_section')->max('updated_at');
+    $lastUpdated = collect([$eventsMax, $pivotMax])->filter()->max();
+
+    // If frontend sends If-Modified-Since and data hasn't changed → 304
+    if ($request->hasHeader('If-Modified-Since')) {
+        $clientTimestamp = $request->header('If-Modified-Since');
+        if ($clientTimestamp === $lastUpdated) {
+            return response()->noContent(304); // 304 Not Modified
+        }
     }
+
+    $events = Event::with('creator', 'sections')->get();
+
+    return response()->json($events)
+        ->header('Last-Modified', $lastUpdated)
+        ->header('X-Last-Updated', $lastUpdated); // also expose for JS clients
+}
 
 public function destroy($id)
 {
@@ -33,6 +56,8 @@ public function destroy($id)
     }
 
     $event->delete();
+
+    Cache::forget('meta.last_updated');
 
     return response()->json(['success' => true]);
 }
@@ -131,7 +156,7 @@ public function store(Request $request)
     // Attach sections
     // ---------------------------
     $event->sections()->sync($sections);
-
+    Cache::forget('meta.last_updated');
     return response()->json([
         'success' => true,
         'event' => $event->load('sections'),
@@ -182,6 +207,7 @@ public function store(Request $request)
         'drive_link' => $request->drive_link,
         'photo_link' => $request->photo_link,
     ]);
+    Cache::forget('meta.last_updated');
 
     return response()->json(['success' => true, 'event' => $event]);
 }
@@ -207,7 +233,7 @@ public function store(Request $request)
             'total_spent' => $request->total_spent,
             'total_revenue' => $request->total_revenue,
         ]);
-
+        Cache::forget('meta.last_updated');
         return response()->json(['success' => true, 'event' => $event]);
     }
 

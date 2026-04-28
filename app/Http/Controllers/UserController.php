@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
+
+
+
+
+
 class UserController extends Controller
 {
     /**
@@ -19,26 +24,37 @@ class UserController extends Controller
      */
 
 
-public function index()
+
+
+
+public function index(Request $request)
 {
-    return Cache::remember('users.index', 60, function () {
+    $usersMax    = DB::table('users')->max('updated_at');
+    $rolesMax    = DB::table('section_user_roles')->max('updated_at');
+    $lastUpdated = collect([$usersMax, $rolesMax])->filter()->max();
+
+    if ($request->hasHeader('If-Modified-Since')) {
+        if ($request->header('If-Modified-Since') === $lastUpdated) {
+            return response()->noContent(304);
+        }
+    }
+
+    $data = Cache::remember('users.index.' . $lastUpdated, 300, function () {
         return User::with([
-                'sections:id,name',      // load sections, only needed fields
-                'creator:id,name'        // optional, light
-            ])
-            ->select(
-                'id',
-                'name',
-                'email',
-                'phone',
-                'date_of_birth',
-                'is_global_admin',
-                'is_super_admin',
-                'created_by'
-            )
+            'sections:id,name',
+            'creator:id,name',
+            'chabibaRoles',   
+            'tala2e3Roles',   
+            'forsanRoles',    
+        ])
+            ->select('id', 'name', 'email', 'phone', 'date_of_birth', 'is_global_admin', 'is_super_admin', 'created_by')
             ->orderBy('name')
             ->get();
     });
+
+    return response()->json($data)
+        ->header('Last-Modified', $lastUpdated)
+        ->header('X-Last-Updated', $lastUpdated);
 }
 
 
@@ -83,6 +99,8 @@ public function store(Request $request)
         'is_global_admin' => $validated['is_global_admin'] ?? false,
         'created_by' => $authUser->id,
     ]);
+
+    Cache::forget('meta.last_updated');
 
     Cache::forget('users.index');
 
@@ -284,7 +302,8 @@ public function destroy($id)
     }
 
     $user->delete();
-Cache::forget('users.index');
+    Cache::forget('meta.last_updated');
+    Cache::forget('users.index');
     return response()->json(['success' => true]);
 }
 
@@ -347,6 +366,7 @@ Cache::forget('users.index');
             'end_date' => null,
         ]);
             Cache::forget('users.index');
+            Cache::forget('meta.last_updated');
 
         return response()->json(['message' => 'User added to section successfully']);
     }

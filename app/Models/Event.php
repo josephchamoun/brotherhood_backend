@@ -12,10 +12,11 @@ class Event extends Model
         'total_spent','total_revenue','notes','drive_link','created_by','photo_link',
     ];
 
-    public function sections()
-    {
-        return $this->belongsToMany(Section::class, 'event_section');
-    }
+
+public function sections()
+{
+    return $this->belongsToMany(Section::class, 'event_section')->withTimestamps();
+}
 
     public function creator()
     {

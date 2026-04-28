@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 
 
+
 class ChabibaController extends Controller
 {
 
@@ -131,6 +132,8 @@ public function assignRole(Request $request)
     }
 
     // 4️⃣ Clear cache if you use caching
+
+    Cache::forget('meta.last_updated');
     Cache::forget('users.index');
 
     return response()->json([
@@ -189,6 +192,7 @@ public function endRole(Request $request)
             ]);
         }
     });
+    Cache::forget('meta.last_updated');
 
     return response()->json([
         'message' => 'Role ended and user returned to normal'
@@ -246,6 +250,8 @@ public function activateUser(Request $request)
             }
         });
 
+        Cache::forget('meta.last_updated');
+
         return response()->json([
             'message' => 'User activated successfully'
         ]);
@@ -280,6 +286,7 @@ public function inactivateUser(Request $request)
         ->update([
             'end_date' => now()->toDateString(),
         ]);
+        Cache::forget('meta.last_updated');
 
     return response()->json([
         'message' => 'User inactivated successfully'

@@ -15,6 +15,7 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MoneyboxController;
 use App\Http\Controllers\DriveAccountController;
 use App\Http\Controllers\ElectionController;
+use App\Http\Controllers\MetaController;
 
 Route::get('/stats', [UserController::class, 'stats']);
 
@@ -164,3 +165,8 @@ Route::get('/elections', [ElectionController::class, 'index']);
 Route::post('/elections', [ElectionController::class, 'store']);
 Route::delete('/elections/{id}', [ElectionController::class, 'destroy']);
 });
+
+
+
+//(no auth needed, it's just timestamps)
+Route::get('/meta', [MetaController::class, 'index']);
