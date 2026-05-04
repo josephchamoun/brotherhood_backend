@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Section;
+use App\Models\MoneyTransaction;
 
 
 class Moneybox extends Model
@@ -23,5 +24,11 @@ class Moneybox extends Model
     {
         return $this->belongsTo(Section::class);
     }
+
+
+    public function transactions()
+{
+    return $this->hasMany(MoneyTransaction::class);
+}
 
 }

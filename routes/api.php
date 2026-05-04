@@ -16,6 +16,7 @@ use App\Http\Controllers\MoneyboxController;
 use App\Http\Controllers\DriveAccountController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\MetaController;
+use App\Http\Controllers\MoneyTransactionController;
 
 Route::get('/stats', [UserController::class, 'stats']);
 
@@ -170,3 +171,12 @@ Route::delete('/elections/{id}', [ElectionController::class, 'destroy']);
 
 //(no auth needed, it's just timestamps)
 Route::get('/meta', [MetaController::class, 'index']);
+
+
+// Money Transactions
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/transactions', [MoneyTransactionController::class, 'index']);
+    Route::post('/transactions', [MoneyTransactionController::class, 'store']);
+    Route::put('/transactions/{id}', [MoneyTransactionController::class, 'update']);
+    Route::delete('/transactions/{id}', [MoneyTransactionController::class, 'destroy']);
+});

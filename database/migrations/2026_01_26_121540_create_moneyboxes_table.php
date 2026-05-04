@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-Schema::create('moneyboxes', function (Blueprint $table) {
-$table->id();
-$table->string('name');
-$table->decimal('amount', 15, 2)->default(0); // money amount
-$table->foreignId('section_id')->constrained()->onDelete('cascade');
-$table->timestamps();
-});
+        Schema::create('moneyboxes', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->decimal('amount', 15, 2)->default(0); // money amount
+        $table->foreignId('section_id')->constrained()->onDelete('cascade');
+        $table->timestamps();
+        });
     }
 
     /**

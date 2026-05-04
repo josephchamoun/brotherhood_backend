@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Models\Moneybox;
+use App\Models\MoneyTransaction;
 
 class EventController extends Controller
 {
@@ -47,12 +49,35 @@ public function destroy($id)
 
     $event = Event::findOrFail($id);
 
-    // ✅ Only High Admin OR Amin Ser of Chabiba (section 1) can delete
     if (
         !$this->isHighAdmin($user) &&
         !$this->hasActiveRole($user, 'Amin Ser', 1)
     ) {
         abort(403, 'Not authorized to delete this event');
+    }
+
+    // ✅ calculate original impact of event
+    $net = ($event->total_revenue ?? 0) - ($event->total_spent ?? 0);
+
+    $money = Moneybox::where('section_id', 1)->first();
+
+    if ($money && $net != 0) {
+
+        // ✅ reverse the effect properly
+        $money->decrement('amount', $net);
+
+        // OR clearer:
+        // $money->increment('amount', -$net);
+
+        // ✅ log reversal
+        MoneyTransaction::create([
+            'moneybox_id' => $money->id,
+            'amount' => -$net,
+            'type' => $net >= 0 ? 'expense' : 'income',
+            'source' => 'event_delete',
+            'event_id' => $event->id,
+            'user_id' => auth()->id(),
+        ]);
     }
 
     $event->delete();
@@ -61,7 +86,6 @@ public function destroy($id)
 
     return response()->json(['success' => true]);
 }
-
 
     /**
      * Create a new event
@@ -168,55 +192,6 @@ public function store(Request $request)
      * Update event details (title, description, notes, drive_link)
      */
     public function updateDetails(Request $request, $id)
-{
-    $user = auth()->user();
-    if (!$user) {
-        abort(401, 'Unauthenticated');
-    }
-
-    $event = Event::with('sections')->findOrFail($id);
-
-    // Special case: Wakil Tanchi2a → description ONLY
-    if ($this->isWakilTanchi2a($user, $event)) {
-        $request->validate([
-            'description' => 'nullable|string',
-        ]);
-
-        $event->update([
-            'description' => $request->description ?? '',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'event' => $event,
-            'role' => 'wakil wanchi2a',
-        ]);
-    }
-
-    // Normal permission check for other roles
-    if (!$this->canEditDetails($user, $event)) {
-        abort(403, 'You cannot edit details for this event');
-    }
-
-    $event->update([
-        'title' => $request->title,
-        'description' => $request->description,
-        'event_date' => $request->event_date,
-        'type' => $request->type,
-        'notes' => $request->notes,
-        'drive_link' => $request->drive_link,
-        'photo_link' => $request->photo_link,
-    ]);
-    Cache::forget('meta.last_updated');
-
-    return response()->json(['success' => true, 'event' => $event]);
-}
-
-
-    /**
-     * Update event financials (total_spent, total_revenue)
-     */
-    public function updateFinancials(Request $request, $id)
     {
         $user = auth()->user();
         if (!$user) {
@@ -225,17 +200,101 @@ public function store(Request $request)
 
         $event = Event::with('sections')->findOrFail($id);
 
-        if (!$this->canEditFinancials($user, $event)) {
-            return abort(403, 'You cannot edit financials for this event');
+        // Special case: Wakil Tanchi2a → description ONLY
+        if ($this->isWakilTanchi2a($user, $event)) {
+            $request->validate([
+                'description' => 'nullable|string',
+            ]);
+
+            $event->update([
+                'description' => $request->description ?? '',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'event' => $event,
+                'role' => 'wakil wanchi2a',
+            ]);
+        }
+
+        // Normal permission check for other roles
+        if (!$this->canEditDetails($user, $event)) {
+            abort(403, 'You cannot edit details for this event');
         }
 
         $event->update([
-            'total_spent' => $request->total_spent,
-            'total_revenue' => $request->total_revenue,
+            'title' => $request->title,
+            'description' => $request->description,
+            'event_date' => $request->event_date,
+            'type' => $request->type,
+            'notes' => $request->notes,
+            'drive_link' => $request->drive_link,
+            'photo_link' => $request->photo_link,
         ]);
         Cache::forget('meta.last_updated');
+
         return response()->json(['success' => true, 'event' => $event]);
     }
+
+
+    /**
+     * Update event financials (total_spent, total_revenue)
+     */
+   public function updateFinancials(Request $request, $id)
+{
+    $user = auth()->user();
+    if (!$user) {
+        abort(401, 'Unauthenticated');
+    }
+
+    $event = Event::with('sections')->findOrFail($id);
+
+    if (!$this->canEditFinancials($user, $event)) {
+        abort(403, 'You cannot edit financials for this event');
+    }
+
+    // ✅ Validate (important)
+    $validated = $request->validate([
+        'total_spent' => 'required|numeric|min:0',
+        'total_revenue' => 'required|numeric|min:0',
+    ]);
+
+    // ✅ Old net
+    $oldNet = ($event->total_revenue ?? 0) - ($event->total_spent ?? 0);
+
+    // ✅ Update event
+    $event->update($validated);
+
+    // ✅ New net
+    $newNet = $validated['total_revenue'] - $validated['total_spent'];
+
+    // ✅ Difference only
+    $diff = $newNet - $oldNet;
+
+    $money = Moneybox::where('section_id', 1)->first();
+
+    if ($money && $diff != 0) {
+        // safer than manual update
+        $money->increment('amount', $diff);
+
+        // ✅ Log ONLY the change
+        MoneyTransaction::create([
+            'moneybox_id' => $money->id,
+            'amount' => $diff,
+            'type' => $diff >= 0 ? 'income' : 'expense',
+            'source' => 'event_update',
+            'event_id' => $event->id,
+            'user_id' => auth()->id(),
+        ]);
+    }
+
+    Cache::forget('meta.last_updated');
+
+    return response()->json([
+        'success' => true,
+        'event' => $event
+    ]);
+}
 
     // ==========================
     // PRIVATE HELPER FUNCTIONS
