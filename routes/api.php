@@ -61,9 +61,10 @@ Route::middleware('auth:sanctum')->put('/myprofile', [UserController::class, 'up
 
     //Events
     Route::get('/eventsmobile', [EventController::class, 'index']);
-
-    Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events', [EventController::class, 'index']);
+    
+    Route::middleware('auth:sanctum')->group(function () {
+    
     Route::post('/addevent', [EventController::class, 'store']);
     Route::put('/events/{id}/details', [EventController::class, 'updateDetails']);
     Route::put('/events/{id}/financials', [EventController::class, 'updateFinancials']);
